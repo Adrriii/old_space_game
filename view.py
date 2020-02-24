@@ -40,11 +40,12 @@ class View:
 
 
         for element in map.array:
-            if not element.type in self.sprite.keys():
-                sys.stderr.write("Can't find texture for : " + element.type)
+            if not element.sprite in self.sprite.keys():
+                sys.stderr.write("Can't find texture for : " + element.sprite)
                 continue
             #Gérer les animations plus tard
-            surface = self.resize(self.sprite[element.type][0], element.width, element.height)
+            surface = self.resize(self.sprite[element.sprite][0], element.width, element.height)
+            
             new_surface_info = self.rotate(surface, (element.angle + element.rotation)%360)
 
             self.win.blit(new_surface_info[0], new_surface_info[1].move(element.pos))

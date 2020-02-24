@@ -59,46 +59,94 @@ class Map:
 
     def add_random_asteroid(self):
         """self, speed, angle, rotation_angle, rotation_speed, pos, type, width, height"""
-        speed = randrange(1, 10)
-        angle = randrange(0, 360)
-        rotation_angle = randrange(0, 360)
-        rotation_speed = randrange(0, 6)
-        pos = (randrange(0, 700), randrange(0, 1000))
-        type = "asteroid"
-        width = height = randrange(10, 50)
-        asteroid = Object(speed, angle, rotation_angle, rotation_speed, pos, type, width, height)
+        asteroid = Asteroid()
+        asteroid.speed = randrange(1, 10)
+        asteroid.angle = randrange(0, 360)
+        asteroid.rotation_angle = randrange(0, 360)
+        asteroid.rotation_speed = randrange(0, 6)
+        asteroid.pos = (randrange(0, 700), randrange(0, 1000))
+        asteroid.width = asteroid.height = randrange(10, 50)
         self.add_obj(asteroid)
 
     def add_obj(self, obj):
         self.array.append(obj)
 
 class Object():
-    def __init__(self, speed, angle, rotation_angle, rotation_speed, pos, type, width, height):
-        self.speed = speed
-        self.angle = angle
-        self.rotation = rotation_angle
-        self.rotation_speed = rotation_speed
+    def __init__(self):
+        self.speed = 0 
+        self.angle = 0
+        self.rotation = 0
+        self.rotation_speed = 0
 
-        self.pos = pos
+        self.pos = (0,0)
 
-        self.width = width
-        self.height = height
+        self.width = 0
+        self.height = 0
 
-        self.type = type
+        self.sprite = "default"
 
     def calculate_new_coord(self):
-        delta_x = self.speed * cos((self.angle - 90)%360 * 3.14/180)
-        delta_y = self.speed * sin((self.angle - 90)%360 * 3.14/180)
+        self.move()
 
-        return (self.pos[0] + delta_x, self.pos[1] + delta_y)
+    def tick(self):
+        if self.go_up:
+            if self.V + self.V_unit < self.V_Max:
+                self.V += self.V_unit
+        else:
+            if self.V > 0:
+                if self.V - self.V_unit > 0:
+                    self.V -= self.V_unit/4
+                else:
+                    self.V = 0
+
+        if self.go_left:
+            if  self.V_angle - self.angle_unit > -self.angle_max:
+                self.V_angle -= self.angle_unit
+
+        if self.go_right:
+            if self.V_angle + self.angle_unit < self.angle_max:
+                self.V_angle += self.angle_unit
+
+    def move(self):
+        """Fonction gérant le mouvement d'un objet"""
+
+        delta_x = self.V * cos((self.angle - 90)%360 * 3.14/180)
+        delta_y = self.V * sin((self.angle - 90)%360 * 3.14/180)
+
+        #print("angle ", self.angle, " delta x ",delta_x, " delta_y ", delta_y)
+
+        self.pos = (self.pos[0] + delta_x, self.pos[1] + delta_y)
+
+        self.angle = (self.V_angle + self.angle) % 360
 
     def play(self):
         self.pos = self.calculate_new_coord()
         self.rotation += self.rotation_speed
 
-class Player():
+class Asteroid(Object):
+    
+    def __init__(self):
+        super().__init__()
+        self.sprite = "asteroid"
+
+class Projectile(Object):
+    def __init__(self, player):
+        super().__init__()
+
+        self.speed = 10
+        self.angle = player.angle
+        self.rotation = 0
+        self.rotation_speed = 0
+        self.pos = player.pos
+        self.width = 20
+        self.height = 40
+
+        self.sprite = "shoot"
+
+class Player(Object):
     """Class modélisant le joueur"""
     def __init__(self):
+        super().__init__()
         self.V_Max = V_MAX          #Vitesse maximum que peut atteindre le joueur
         self.V = 0                  #Vitesse actuelle du joueur
         self.V_unit = 0.1           #Valeur de l'accélération qui peur être apportée au joueur
@@ -139,56 +187,6 @@ class Player():
             self.go_down = state
             if state:
                 self.go_up = False
-
-    def move(self):
-        """Fonction gérant le mouvement du joueur"""
-        if self.go_up:
-            if self.V + self.V_unit < self.V_Max:
-                self.V += self.V_unit
-
-        elif self.go_down:
-            if self.V > 0:
-                if self.V - self.V_unit > 0:
-                    self.V -= self.V_unit
-                else:
-                    self.V = 0
-        else:
-            if self.V > 0:
-                if self.V - self.V_unit > 0:
-                    self.V -= self.V_unit/4
-                else:
-                    self.V = 0
-
-        delta_x = self.V * cos((self.angle - 90)%360 * 3.14/180)
-        delta_y = self.V * sin((self.angle - 90)%360 * 3.14/180)
-
-        #print("angle ", self.angle, " delta x ",delta_x, " delta_y ", delta_y)
-
-        self.pos = (self.pos[0] + delta_x, self.pos[1] + delta_y)
-
-        angle_limit = 1 - (self.V / self.V_Max)/3
-        if angle_limit < 0.3:
-            angle_limit = 0.3
-
-        if self.go_left:
-            if  self.V_angle - self.angle_unit > -self.angle_max:
-                self.V_angle -= self.angle_unit * angle_limit
-
-
-        elif self.go_right:
-            if self.V_angle + self.angle_unit < self.angle_max:
-                self.V_angle += self.angle_unit * angle_limit
-        else:
-            if abs(self.V_angle) < 0.1:
-                self.V_angle = 0
-
-            elif self.V_angle < 0:
-                self.V_angle += self.angle_unit * angle_limit
-
-            elif self.V_angle > 0:
-                self.V_angle -= self.angle_unit * angle_limit
-
-        self.angle = (self.V_angle + self.angle)%360
 
     def active_shoot(self, state):
         self.shoot = state
@@ -235,5 +233,5 @@ class Model:
             self.map.add_random_asteroid()
 
         if self.player.shoot:
-            projectile = Object(10, self.player.angle, 0, 0, self.player.pos, "shoot", 20, 40)
+            projectile = Projectile(self.player)
             self.map.add_obj(projectile)
